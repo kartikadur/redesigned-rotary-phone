@@ -22,7 +22,7 @@ export class LocalGameStorage implements GameStorage {
 
   loadProfile(): PlayerProfile {
     try {
-      const storedProfile = window.localStorage.getItem(this.storageKey);
+      const storedProfile = window.GameInterface.storage.getItem(this.storageKey);
       if (!storedProfile) return defaultProfile();
 
       const value = JSON.parse(storedProfile) as Partial<PlayerProfile>;
@@ -39,7 +39,7 @@ export class LocalGameStorage implements GameStorage {
 
   saveProfile(profile: PlayerProfile): void {
     try {
-      window.localStorage.setItem(this.storageKey, JSON.stringify(profile));
+      window.GameInterface.storage.setItem(this.storageKey, JSON.stringify(profile));
     } catch {
       // The game remains playable when browser storage is unavailable.
     }

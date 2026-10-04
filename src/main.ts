@@ -8,6 +8,9 @@ import { SnakeScene } from './game/scenes/SnakeScene';
 import { SnakeGame } from './game/snakeGame';
 import type { Direction, GamePhase, GameSnapshot } from './game/types';
 
+import { Analytics } from './events/eventHandler';
+import { GameEventData } from './events/event.type';
+
 const requiredElement = <T extends HTMLElement>(selector: string): T => {
   const element = document.querySelector<T>(selector);
   if (!element) throw new Error(`Missing required element: ${selector}`);
@@ -77,17 +80,17 @@ const overlayContent: Record<
   paused: (snapshot) =>
     snapshot.pauseSource === 'system'
       ? {
-          eyebrow: 'Game paused',
-          title: 'Please wait',
-          copy: 'Gameplay will continue when the interruption has ended.'
-        }
+        eyebrow: 'Game paused',
+        title: 'Please wait',
+        copy: 'Gameplay will continue when the interruption has ended.'
+      }
       : {
-          eyebrow: 'Game paused',
-          title: 'Take a breather',
-          copy: 'Your run is waiting exactly where you left it.',
-          primary: 'Resume',
-          secondary: 'Exit to menu'
-        },
+        eyebrow: 'Game paused',
+        title: 'Take a breather',
+        copy: 'Your run is waiting exactly where you left it.',
+        primary: 'Resume',
+        secondary: 'Exit to menu'
+      },
   'level-complete': (snapshot) => ({
     eyebrow: `Level ${snapshot.level} clear`,
     title: 'Nice moves!',
@@ -200,3 +203,99 @@ window.addEventListener('beforeunload', () => {
   controller.dispose();
   phaserGame.destroy(true);
 });
+
+/**
+ * Game Interface code
+ */
+
+let prevPhase: string | null = null;
+
+const analytics = new Analytics();
+
+controller.events.on('ready', (e) => {
+  window.GameInterface.gameReady();
+})
+
+controller.events.on('runEnded', (e) => {
+  switch (e.reason) {
+    case 'fail': {
+      window.GameInterface.stageFail(e);
+      break;
+    }
+    case 'complete': {
+      window.GameInterface.stageComplete(e);
+      break;
+    }
+    case 'quit': {
+      window.GameInterface.stageQuit(e);
+      window.GameInterface.gameFinished(e);
+      break;
+    }
+  }
+
+  analytics.send('level', e);
+  if (e.reason === 'quit') {
+    const { bestScore, highestUnlockedLevel: bestLevel } = controller.getProfile()
+    const data: GameEventData = {
+      reason: 'quit',
+      score: e.score,
+      bestScore,
+      level: e.level,
+      bestLevel,
+      occurredAt: new Date().getTime(),
+    }
+    analytics.send('game', data);
+  }
+  prevPhase = null;
+})
+
+controller.events.on('stateChanged', (e: GameSnapshot) => {
+  console.debug('state updated', e)
+  if (prevPhase == e.phase) { return }
+  prevPhase = e.phase;
+  switch (e.phase) {
+    case 'game-over': {
+      window.GameInterface.gameFail(e);
+      const { bestScore, highestUnlockedLevel: bestLevel } = controller.getProfile()
+      const data: GameEventData = {
+        reason: 'fail',
+        score: e.score,
+        bestScore,
+        level: e.level,
+        bestLevel,
+        occurredAt: new Date().getTime(),
+      }
+      analytics.send('game', data);
+      break;
+    }
+    case 'level-complete': { break; }
+    case 'finished': { window.GameInterface.gameComplete(e); break; }
+  }
+})
+
+controller.events.on('pauseChanged', (e) => {
+  if (e.paused) {
+    window.GameInterface.gamePause(e);
+  } else {
+    window.GameInterface.gameResume(e);
+  }
+})
+controller.events.on('runStarted', (e) => { 
+  console.debug('run started', e)
+ })
+controller.events.on('scoreChanged', (e) => {
+  window.GameInterface.sendScore(e.score, { type: 'level', level: e.level })
+})
+controller.events.on('progressChanged', (e) => console.debug('progress changed', e))
+controller.events.on('gameFinished', (e) => {
+  const data: GameEventData = {
+    reason: 'complete',
+    score: e.score,
+    bestScore: e.bestScore,
+    level: controller.getSnapshot().level,
+    bestLevel: controller.getProfile().highestUnlockedLevel,
+    occurredAt: new Date().getTime(),
+  }
+  analytics.send('game', data);
+})
+controller.events.on('audioChanged', (e) => console.debug('audio updated', e))

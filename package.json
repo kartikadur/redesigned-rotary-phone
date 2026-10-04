@@ -10,7 +10,8 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "phaser": "3.90.0"
+    "phaser": "3.90.0",
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

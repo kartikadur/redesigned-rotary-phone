@@ -85,6 +85,10 @@
       </section>
     </main>
 
-    <script type="module" src="/src/main.ts"></script>
+    <!-- <script type="module" src="/src/main.ts"></script> -->
+    <script src="https://api.games.famobi.com/init.js"></script>
+    <script>
+      window.GameInterface.init([]).then(() => { import('/src/main.ts') });
+    </script>
   </body>
 </html>

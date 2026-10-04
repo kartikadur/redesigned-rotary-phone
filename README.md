@@ -67,3 +67,15 @@ The included workflow builds and deploys the game whenever the default branch is
 ## License
 
 MIT
+
+## Notes
+- Added an `index.d.ts` file so TypeScript would stop complaining about the `GameInterface` object on the window object.
+- everything should work as is, out of the box, as described above.
+- haven't stress tested the game, nor have I completed it since my reflexes aren't great for games like these. I've instead opted to create a script in the nodejs backend server that will auto generate data for use in the React frontend.
+
+## Next Step
+In the interest of time boxing the effort of integrating the SDK, the following steps are yet to be implemented or implemented only partially
+- Implement loading indicator for when the scripts are loading
+- Implement tracking game start, while game ready and resume are being tracked. I'm not actively using any of these, so all of them could technically be removed.
+- The Game documentation suggests passing scripts to the `GameInterface.init` function, but that would break the loading process as well as the game, hence the current proces where I manually import the modules once the `GameInterface` object is available. Short of changing multiple things in the development environment I am at least currently unaware how best to handle it, so for now I've left it as is, in the interest of time.
+- had to use `uuid` lib to create unique id for users, ideally this would be handled by the authz/authn system once it is implemented for production.
